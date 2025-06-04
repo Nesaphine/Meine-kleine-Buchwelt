@@ -16,6 +16,22 @@ import Statistics from "@/components/statistics"
 import type { Book } from "@/lib/types"
 import { useTheme } from "next-themes"
 
+// Standardgenres
+const DEFAULT_GENRES = [
+  "Romance",
+  "Fantasy",
+  "Thriller",
+  "Science Fiction",
+  "Krimi",
+  "Sachbuch",
+  "Biografie",
+  "Historisch",
+  "Young Adult",
+  "Kinderbuch",
+  "Dark Romance",
+  "Romantasy",
+]
+
 export default function Home() {
   const [books, setBooks] = useState<Book[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
@@ -25,23 +41,70 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState("asc")
   const [filterGenre, setFilterGenre] = useState("")
   const [filterAuthor, setFilterAuthor] = useState("")
-  const { setTheme } = useTheme()
+  const [availableGenres, setAvailableGenres] = useState<string[]>(DEFAULT_GENRES)
+  const { theme, setTheme } = useTheme()
 
-  // Load books from localStorage on initial render
+  // Load books and genres from localStorage on initial render
   useEffect(() => {
     const savedBooks = localStorage.getItem("books")
     if (savedBooks) {
-      setBooks(JSON.parse(savedBooks))
+      try {
+        const parsedBooks = JSON.parse(savedBooks)
+
+        // Konvertiere alte Bücher mit einzelnem Genre zu Array
+        const updatedBooks = parsedBooks.map((book: any) => ({
+          ...book,
+          genre: Array.isArray(book.genre) ? book.genre : [book.genre],
+        }))
+
+        setBooks(updatedBooks)
+
+        // Sammle alle Genres aus den Büchern
+        const genresFromBooks = updatedBooks.flatMap((book: Book) => book.genre)
+        const uniqueGenres = [...new Set([...DEFAULT_GENRES, ...genresFromBooks])]
+        setAvailableGenres(uniqueGenres)
+      } catch (error) {
+        console.error("Fehler beim Laden der Bücher:", error)
+      }
+    }
+
+    const savedGenres = localStorage.getItem("genres")
+    if (savedGenres) {
+      try {
+        const parsedGenres = JSON.parse(savedGenres)
+        setAvailableGenres([...DEFAULT_GENRES, ...parsedGenres])
+      } catch (error) {
+        console.error("Fehler beim Laden der Genres:", error)
+      }
     }
   }, [])
 
-  // Save books to localStorage whenever they change
+  // Save books and genres to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("books", JSON.stringify(books))
-  }, [books])
 
-  const addBook = (book: Book) => {
-    setBooks([...books, book])
+    // Speichere alle benutzerdefinierten Genres
+    const customGenres = availableGenres.filter((genre) => !DEFAULT_GENRES.includes(genre))
+    if (customGenres.length > 0) {
+      localStorage.setItem("genres", JSON.stringify(customGenres))
+    }
+  }, [books, availableGenres])
+
+  const addBook = (book: Omit<Book, "id" | "category">) => {
+    const newBook = {
+      ...book,
+      id: Date.now().toString(),
+      category: currentTab,
+    }
+
+    setBooks([...books, newBook as Book])
+
+    // Aktualisiere die verfügbaren Genres
+    const newGenres = book.genre.filter((genre) => !availableGenres.includes(genre))
+    if (newGenres.length > 0) {
+      setAvailableGenres([...availableGenres, ...newGenres])
+    }
+
     setShowAddForm(false)
   }
 
@@ -51,6 +114,12 @@ export default function Home() {
 
   const updateBook = (updatedBook: Book) => {
     setBooks(books.map((book) => (book.id === updatedBook.id ? updatedBook : book)))
+
+    // Aktualisiere die verfügbaren Genres
+    const newGenres = updatedBook.genre.filter((genre) => !availableGenres.includes(genre))
+    if (newGenres.length > 0) {
+      setAvailableGenres([...availableGenres, ...newGenres])
+    }
   }
 
   const markAsRead = (id: string, isRead: boolean) => {
@@ -79,8 +148,33 @@ export default function Home() {
     }
   }
 
+  // Neue Funktion für "Angekommen?" Checkbox
+  const markAsArrived = (id: string, isArrived: boolean) => {
+    if (!isArrived) return // Nur handeln, wenn die Checkbox aktiviert wird
+
+    const bookToUpdate = books.find((book) => book.id === id)
+    if (!bookToUpdate) return
+
+    // Entferne das Buch aus den Vorbestellungen
+    const filteredBooks = books.filter((book) => book.id !== id)
+
+    // Füge das Buch zur Bibliothek hinzu
+    const updatedBook = {
+      ...bookToUpdate,
+      isArrived,
+      category: "bibliothek", // Ändere die Kategorie zu "bibliothek"
+    }
+
+    setBooks([...filteredBooks, updatedBook])
+  }
+
   const exportData = () => {
-    const dataStr = JSON.stringify(books)
+    const dataToExport = {
+      books,
+      genres: availableGenres.filter((genre) => !DEFAULT_GENRES.includes(genre)),
+    }
+
+    const dataStr = JSON.stringify(dataToExport)
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`
 
     const exportFileDefaultName = "meine-buchwelt-export.json"
@@ -97,8 +191,26 @@ export default function Home() {
       fileReader.readAsText(event.target.files[0], "UTF-8")
       fileReader.onload = (e) => {
         if (e.target?.result) {
-          const importedBooks = JSON.parse(e.target.result as string)
-          setBooks(importedBooks)
+          try {
+            const importedData = JSON.parse(e.target.result as string)
+
+            if (importedData.books) {
+              // Konvertiere alte Bücher mit einzelnem Genre zu Array
+              const updatedBooks = importedData.books.map((book: any) => ({
+                ...book,
+                genre: Array.isArray(book.genre) ? book.genre : [book.genre],
+              }))
+
+              setBooks(updatedBooks)
+            }
+
+            if (importedData.genres) {
+              setAvailableGenres([...DEFAULT_GENRES, ...importedData.genres])
+            }
+          } catch (error) {
+            console.error("Fehler beim Importieren der Daten:", error)
+            alert("Die Datei enthält ungültige Daten.")
+          }
         }
       }
     }
@@ -118,7 +230,8 @@ export default function Home() {
     })
     .filter((book) => {
       if (filterGenre) {
-        return book.genre === filterGenre
+        // Prüfe, ob das Buch das ausgewählte Genre enthält
+        return book.genre.includes(filterGenre)
       }
       return true
     })
@@ -140,7 +253,7 @@ export default function Home() {
     })
 
   // Get unique genres and authors for filters
-  const genres = [...new Set(books.map((book) => book.genre))]
+  const allGenres = [...new Set(books.flatMap((book) => book.genre))]
   const authors = [...new Set(books.map((book) => book.author))]
 
   return (
@@ -154,18 +267,10 @@ export default function Home() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setTheme("light")}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="bg-mint-100 hover:bg-mint-200 dark:bg-lavender-800"
             >
-              <Sun className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setTheme("dark")}
-              className="bg-mint-100 hover:bg-mint-200 dark:bg-lavender-800"
-            >
-              <Moon className="h-5 w-5" />
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             <Button
               variant="outline"
@@ -262,7 +367,7 @@ export default function Home() {
                     className="px-3 py-2 rounded-md border bg-mint-50 dark:bg-lavender-800"
                   >
                     <option value="">Alle Genres</option>
-                    {genres.map((genre) => (
+                    {allGenres.map((genre) => (
                       <option key={genre} value={genre}>
                         {genre}
                       </option>
@@ -311,9 +416,10 @@ export default function Home() {
                   </CardHeader>
                   <CardContent>
                     <BookForm
-                      onSubmit={(book) => addBook({ ...book, category: tab, id: Date.now().toString() })}
+                      onSubmit={addBook}
                       onCancel={() => setShowAddForm(false)}
                       category={tab}
+                      availableGenres={availableGenres}
                     />
                   </CardContent>
                 </Card>
@@ -329,6 +435,8 @@ export default function Home() {
                     onUpdate={updateBook}
                     onMarkAsRead={markAsRead}
                     onMarkAsBought={markAsBought}
+                    onMarkAsArrived={markAsArrived}
+                    availableGenres={availableGenres}
                   />
                 ))}
                 {filteredBooks.length === 0 && !showAddForm && (

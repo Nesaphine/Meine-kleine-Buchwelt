@@ -16,9 +16,19 @@ interface BookCardProps {
   onUpdate: (book: Book) => void
   onMarkAsRead: (id: string, isRead: boolean) => void
   onMarkAsBought: (id: string, isBought: boolean) => void
+  onMarkAsArrived: (id: string, isArrived: boolean) => void
+  availableGenres: string[]
 }
 
-export default function BookCard({ book, onDelete, onUpdate, onMarkAsRead, onMarkAsBought }: BookCardProps) {
+export default function BookCard({
+  book,
+  onDelete,
+  onUpdate,
+  onMarkAsRead,
+  onMarkAsBought,
+  onMarkAsArrived,
+  availableGenres,
+}: BookCardProps) {
   const [isEditing, setIsEditing] = useState(false)
 
   const handleUpdate = (updatedBookData: Omit<Book, "id" | "category">) => {
@@ -48,7 +58,13 @@ export default function BookCard({ book, onDelete, onUpdate, onMarkAsRead, onMar
           <h3 className="text-xl font-bold">Buch bearbeiten</h3>
         </CardHeader>
         <CardContent>
-          <BookForm book={book} onSubmit={handleUpdate} onCancel={() => setIsEditing(false)} category={book.category} />
+          <BookForm
+            book={book}
+            onSubmit={handleUpdate}
+            onCancel={() => setIsEditing(false)}
+            category={book.category}
+            availableGenres={availableGenres}
+          />
         </CardContent>
       </Card>
     )
@@ -76,12 +92,23 @@ export default function BookCard({ book, onDelete, onUpdate, onMarkAsRead, onMar
             <h3 className="font-bold text-lg line-clamp-2">{book.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{book.author}</p>
           </div>
-          <Badge className="bg-lavender-500 hover:bg-lavender-600">{book.genre}</Badge>
         </div>
       </CardHeader>
 
       <CardContent className="pb-2 flex-grow">
         <div className="space-y-2">
+          <div className="flex flex-wrap gap-1 mb-2">
+            {Array.isArray(book.genre) ? (
+              book.genre.map((genre) => (
+                <Badge key={genre} className="bg-lavender-500 hover:bg-lavender-600">
+                  {genre}
+                </Badge>
+              ))
+            ) : (
+              <Badge className="bg-lavender-500 hover:bg-lavender-600">{book.genre}</Badge>
+            )}
+          </div>
+
           <p className="font-medium">{book.price.toFixed(2)} €</p>
 
           {book.releaseDate && (
@@ -118,6 +145,20 @@ export default function BookCard({ book, onDelete, onUpdate, onMarkAsRead, onMar
             />
             <Label htmlFor={`read-${book.id}`} className="text-sm">
               Gelesen?
+            </Label>
+          </div>
+        )}
+
+        {book.category === "vorbestellungen" && (
+          <div className="flex items-center space-x-2 w-full">
+            <Checkbox
+              id={`arrived-${book.id}`}
+              checked={book.isArrived}
+              onCheckedChange={(checked) => onMarkAsArrived(book.id, checked as boolean)}
+              className="data-[state=checked]:bg-lavender-500 data-[state=checked]:border-lavender-500"
+            />
+            <Label htmlFor={`arrived-${book.id}`} className="text-sm">
+              Angekommen?
             </Label>
           </div>
         )}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import GenreSelector from "./genre-selector"
 import type { Book } from "@/lib/types"
 
 interface BookFormProps {
@@ -14,13 +15,14 @@ interface BookFormProps {
   onSubmit: (book: Omit<Book, "id" | "category">) => void
   onCancel: () => void
   category: string
+  availableGenres: string[]
 }
 
-export default function BookForm({ book, onSubmit, onCancel, category }: BookFormProps) {
+export default function BookForm({ book, onSubmit, onCancel, category, availableGenres }: BookFormProps) {
   const [name, setName] = useState(book?.name || "")
   const [author, setAuthor] = useState(book?.author || "")
   const [price, setPrice] = useState(book?.price || 0)
-  const [genre, setGenre] = useState(book?.genre || "")
+  const [genres, setGenres] = useState<string[]>(book?.genre || [])
   const [imageUrl, setImageUrl] = useState(book?.imageUrl || "")
   const [releaseDate, setReleaseDate] = useState(
     book?.releaseDate ? new Date(book.releaseDate).toISOString().split("T")[0] : "",
@@ -35,7 +37,7 @@ export default function BookForm({ book, onSubmit, onCancel, category }: BookFor
       name,
       author,
       price,
-      genre,
+      genre: genres,
       imageUrl,
       releaseDate: releaseDate ? new Date(releaseDate).toISOString() : undefined,
       shopLink: category === "wunschliste" ? shopLink : undefined,
@@ -82,29 +84,6 @@ export default function BookForm({ book, onSubmit, onCancel, category }: BookFor
             required
             className="bg-white dark:bg-lavender-800"
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="genre">Genre *</Label>
-          <select
-            id="genre"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-            required
-            className="w-full px-3 py-2 rounded-md border bg-white dark:bg-lavender-800"
-          >
-            <option value="">Wähle ein Genre</option>
-            <option value="Romance">Romance</option>
-            <option value="Fantasy">Fantasy</option>
-            <option value="Thriller">Thriller</option>
-            <option value="Science Fiction">Science Fiction</option>
-            <option value="Krimi">Krimi</option>
-            <option value="Sachbuch">Sachbuch</option>
-            <option value="Biografie">Biografie</option>
-            <option value="Historisch">Historisch</option>
-            <option value="Young Adult">Young Adult</option>
-            <option value="Kinderbuch">Kinderbuch</option>
-          </select>
         </div>
 
         <div className="space-y-2">
@@ -160,21 +139,28 @@ export default function BookForm({ book, onSubmit, onCancel, category }: BookFor
                 className="bg-white dark:bg-lavender-800"
               />
             </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="notes">Notizen</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Deine Gedanken zum Buch..."
-                className="bg-white dark:bg-lavender-800"
-                rows={4}
-              />
-            </div>
           </>
         )}
       </div>
+
+      <div className="space-y-2 col-span-full">
+        <Label>Genres *</Label>
+        <GenreSelector selectedGenres={genres} availableGenres={availableGenres} onChange={setGenres} />
+      </div>
+
+      {category === "bibliothek" && (
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notizen</Label>
+          <Textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Deine Gedanken zum Buch..."
+            className="bg-white dark:bg-lavender-800"
+            rows={4}
+          />
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import type { Book } from "@/lib/types"
 
 interface CalendarProps {
@@ -107,9 +108,19 @@ export default function Calendar({ books }: CalendarProps) {
                   <p className="text-sm text-gray-500">{book.author}</p>
                 </CardHeader>
                 <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {Array.isArray(book.genre) ? (
+                      book.genre.map((genre) => (
+                        <Badge key={genre} className="bg-lavender-500 hover:bg-lavender-600">
+                          {genre}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge className="bg-lavender-500 hover:bg-lavender-600">{book.genre}</Badge>
+                    )}
+                  </div>
                   <div className="flex justify-between items-center">
                     <span>{book.price.toFixed(2)} €</span>
-                    <span className="text-sm bg-lavender-100 dark:bg-lavender-800 px-2 py-1 rounded">{book.genre}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -138,9 +149,19 @@ export default function Calendar({ books }: CalendarProps) {
                   <p className="text-sm text-gray-500">{book.author}</p>
                 </CardHeader>
                 <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {Array.isArray(book.genre) ? (
+                      book.genre.map((genre) => (
+                        <Badge key={genre} className="bg-lavender-500 hover:bg-lavender-600">
+                          {genre}
+                        </Badge>
+                      ))
+                    ) : (
+                      <Badge className="bg-lavender-500 hover:bg-lavender-600">{book.genre}</Badge>
+                    )}
+                  </div>
                   <div className="flex justify-between items-center">
                     <span>{book.price.toFixed(2)} €</span>
-                    <span className="text-sm bg-lavender-100 dark:bg-lavender-800 px-2 py-1 rounded">{book.genre}</span>
                   </div>
                 </CardContent>
               </Card>

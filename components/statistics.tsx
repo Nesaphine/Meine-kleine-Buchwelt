@@ -37,13 +37,16 @@ export default function Statistics({ books }: StatisticsProps) {
   const totalSpent = librarySpent + preOrderSpent
 
   // Get genres distribution
-  const genreDistribution = books.reduce((acc: Record<string, number>, book) => {
-    if (!acc[book.genre]) {
-      acc[book.genre] = 0
+  const genreDistribution: Record<string, number> = {}
+  books.forEach((book) => {
+    if (Array.isArray(book.genre)) {
+      book.genre.forEach((genre) => {
+        genreDistribution[genre] = (genreDistribution[genre] || 0) + 1
+      })
+    } else if (book.genre) {
+      genreDistribution[book.genre] = (genreDistribution[book.genre] || 0) + 1
     }
-    acc[book.genre]++
-    return acc
-  }, {})
+  })
 
   // Sort genres by count
   const sortedGenres = Object.entries(genreDistribution)
